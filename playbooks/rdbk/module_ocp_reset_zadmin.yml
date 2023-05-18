@@ -1,0 +1,17 @@
+#- hosts:
+#    - localhost
+#  gather_facts: no
+#  tasks: 
+#    - name: Add a host alias 
+#      add_host:
+#        hostname: 'zvmagent_tmp'
+#        groups: zvmagent_tmp
+#        ansible_ssh_host: '172.83.4.15'
+
+- name: prepare the parm files
+  hosts: localhost
+  #hosts: zvmagent_tmp
+  #become: yes
+  #become_user: root
+  roles:
+  - ocp-reset-cluster-zadmin

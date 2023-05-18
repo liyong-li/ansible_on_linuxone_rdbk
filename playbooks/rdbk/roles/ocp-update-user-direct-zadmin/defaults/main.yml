@@ -1,0 +1,8 @@
+---
+# defaults file for create-cluster
+workdir: ~/ocp4-workdir
+install_mode: zvm
+bootfile_dest: "{{ bootfile_dest_dict[install_mode] }}"
+bootfile_dest_dict:
+  zkvm: ~/tftpboot
+  zvm: /root/ocp

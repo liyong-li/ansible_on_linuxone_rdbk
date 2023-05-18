@@ -1,0 +1,66 @@
+apiVersion: v1
+baseDomain: "{{ cluster_base_domain }}"
+{% if ocp_repo_type=="Proxy" %}
+proxy:
+  httpProxy: {{ocp_proxy_http}}
+  httpsProxy: {{ocp_proxy_https}}
+  noProxy: .{{ cluster_domain_name }},169.254.169.254,{{ subnet_cidr }}
+{% endif %}
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: 0
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: {{ cluster_nodes.masters | length }}
+metadata:
+  name: "{{ cluster_name }}"
+networking:
+  clusterNetworks:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  none: {}
+pullSecret: '{{ ocp4_pull_secret | to_json }}'
+sshKey: '{{ bastion_pubkey.content | b64decode }}'
+additionalTrustBundle: |
+  -----BEGIN CERTIFICATE-----
+  MIIE5jCCA06gAwIBAgIIY09u5BVaX4cwDQYJKoZIhvcNAQELBQAwezEMMAoGA1UE
+  AxMDZHBwMRMwEQYKCZImiZPyLGQBARMDZHBwMRAwDgYDVQQKEwd0ZXN0MTIzMQsw
+  CQYDVQQGEwJTRzETMBEGCgmSJomT8ixkARkWA2RwcDEiMCAGCSqGSIb3DQEJARYT
+  dGVzdDEyM0B0ZXN0MTIzLmNvbTAgFw0yMjEwMTkwMzI4MzdaGA8yMTIyMDkyNTAz
+  Mjg0MlowezEMMAoGA1UEAxMDZHBwMRMwEQYKCZImiZPyLGQBARMDZHBwMRAwDgYD
+  VQQKEwd0ZXN0MTIzMQswCQYDVQQGEwJTRzETMBEGCgmSJomT8ixkARkWA2RwcDEi
+  MCAGCSqGSIb3DQEJARYTdGVzdDEyM0B0ZXN0MTIzLmNvbTCCAaIwDQYJKoZIhvcN
+  AQEBBQADggGPADCCAYoCggGBAMoF6QCHyTv5fDZDCg6o1odgu/4mwjC9ft99y7Pa
+  EavaPHQoNcmOCPC+ZYD6HIeeYEE2tuyiWYpmXRhxrlQr2T1sY1G9BFezgy36l4jq
+  3HC5ow5PXgPJutzZIdg+UGKopw8+WsTQloPtIQhvjBo3K0iP80qHbZZgjuEG+vFw
+  U6xhsY4c397rTLhwvpZOUqm7TvqyFLnDWtOtnzGn8mcpPmJfggD73QiUc+jC6Kv3
+  T03EdVk11sIw30FCT5or+QJn38SDO7bI4j3dYa4nVU+Bn0ftj9EXPTwkqox8Iw75
+  +4O29V60Q3b3/KMgYx9whJnkI0eJym1vXSBaBiPBPW/tjNqVrEQBYfa4v8EdMdle
+  Gzlbl7pdFlsjxpeyuACrzdb2Q5bgtecmc4irY6GCpBM39bNiNqKfqypfpxZAibci
+  /9oZIZTmjJ+RyF33apMkABcNhrGDCoaooyrAhAZDLEBu7wr07Z6GOsCT29PSKblK
+  +4mTgRAcCQHb8Rz7TANRWoOiEwIDAQABo2wwajAPBgNVHRMBAf8EBTADAQH/MCcG
+  A1UdJQQgMB4GCCsGAQUFBwMCBggrBgEFBQcDAQYIKwYBBQUHAxEwDwYDVR0PAQH/
+  BAUDAwdGADAdBgNVHQ4EFgQUGXPRJsOsOFak48TGQC6vFB4A8PowDQYJKoZIhvcN
+  AQELBQADggGBAGg5u0arXHPObgRWdaQB4Nk6Y/gof+H2LV8ObbSMrAmlsdCUsoxN
+  iUlmvan0UxREgAy/gHHJCPYNJmsJZ15fZwBXSfsGwa0+Yb80v6LZ5dt49VPdH230
+  IqNwcmjloH2H7soTYx/xIuNQiZsqJJL3eaNCFoZRZMf5Om4LP9a42kkdnYV/6J2Q
+  uFXoi+/mY13fDEA84zVWndnx6RNyzJDPp9bXKxh/H3LDnyYRbWaJLXKKm4+bmfq6
+  iCiyIIc1wBSAr3SPc71uuJRVrrkq9AycIoIuKIBXWVHgJIpmdk8Q4IOzqUSkZGhA
+  sTlj/YimAJrPgLtxX0bK8PmCmr9jwsF6pulvrO77uEQHbJV6GTD2qIcPAVBn6xV2
+  1G+2cufqdSXL5I5g5qobz67liUH5ER72iVHOqvMUaKHT7MAz8NHvgkXoWkFmhKqO
+  iZmrPJE8tTVfQyTPPh5mu5RTzaRvuTQnEgHQHLsyTmhQPh8MVXsPzC0BYA0L9zau
+  JKqpATeGuYv3rA==
+  -----END CERTIFICATE-----   
+imageContentSources:
+- mirrors:
+  - registry:5000/ocp/openshift4
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - registry:5000/ocp/openshift4
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev 

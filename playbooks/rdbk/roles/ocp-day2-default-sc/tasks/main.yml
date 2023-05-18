@@ -1,0 +1,6 @@
+---
+# tasks file for ocp-day2-default-sc
+
+- name: set default sc 
+  shell: /usr/local/bin/oc patch storageclass managed-nfs-storage -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+

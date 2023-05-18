@@ -1,0 +1,17 @@
+---
+- debug:
+   var: item
+- name: Add a host alias 
+  add_host:
+    hostname: '{{ item.linux_hostname }}'
+    groups: drp_hosts_grp
+    ansible_ssh_host: '{{ item.linux_ip }}'
+
+#- name: test
+#  command: sh /root/test.sh {{item.linux_vcpu_num}}
+#  delegate_to: {{ item.linux_ip }}
+#  register: test_output
+#- debug:
+#    var: test_output
+
+  

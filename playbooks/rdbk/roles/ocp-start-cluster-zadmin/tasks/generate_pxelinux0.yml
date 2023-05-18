@@ -1,0 +1,138 @@
+---
+# tasks file for create-cluster
+- name: copy PRM to zVM minidisk
+  tags: linux-cfg
+  shell: cp --sparse=never "{{ bootfile_dest }}/{{item.vm_uname|upper}}.PRM" /mnt/lnxmaint/ ; sync ; sync
+  register: cmd_output
+
+- name: copy USER INSTALL to zVM minidisk
+  tags: linux-cfg
+  shell: cp --sparse=never "{{ bootfile_dest }}/{{item.vm_uname|upper}}.INSTALL" /mnt/lnxmaint/ ; sync ; sync
+  register: cmd_output
+- debug: var=cmd_output
+
+- name: create user directory entry for Linux 
+  #delegate_to: "{{ zvmagent}}"
+  vars:
+    vm_name: "{{item.vm_uname|upper}}"
+  shell: /opt/zthin/bin/smcli Image_Create_DM -T {{ vm_name|quote }} -f {{ bootfile_dest }}/{{vm_name}}.DIRECT
+  #when: item.profile == "RHEL84"
+
+- name: Start up linux 
+  #delegate_to: "{{ zvmagent}}"
+  shell: "/opt/zthin/bin/smcli Image_Activate -T {{item.vm_uname|upper}}"
+
+
+- name: wait for new system  node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+
+- name: replace user directory entry for Linux
+  #delegate_to: "{{ zvmagent}}"
+  vars:
+    vm_name: "{{item.vm_uname|upper}}"
+  shell: /opt/zthin/bin/smcli Image_Definition_Update_DM -T {{ vm_name|quote }} -k "INCLUDE={{guest_profile}}"
+
+
+- name: replace user directory entry for Linux
+  #delegate_to: "{{ zvmagent}}"
+  vars:
+    vm_name: "{{item.vm_uname|upper}}"
+  shell: "/opt/zthin/bin/smcli Image_IPL_Set_DM -T {{ vm_name|quote }} -s {{load_address}}"
+
+
+- name: generate user install done
+  tags: linux-cfg
+  become: yes
+  become_user: root
+  template:
+    src: user.install.done.j2
+    dest: "{{ tmp_dir }}/{{item.vm_uname|upper}}.INSTALL"
+
+- name: copy USER INSTALL DONE to zVM minidisk
+  tags: linux-cfg
+  shell: cp --sparse=never "{{ tmp_dir }}/{{item.vm_uname|upper}}.INSTALL" /mnt/lnxmaint/ ; sync ; sync
+  register: cmd_output
+- debug: var=cmd_output
+
+- name: Start up bootstrap node
+  shell: "/opt/zthin/bin/smcli Image_Activate -T {{ item.vm_uname }}"
+  with_items: "{{ cluster_nodes.bootstrap }}"
+  when: install_mode == 'zvm'
+
+- name: wait for bootstrap node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.bootstrap }}"
+
+- name: "wait for bootstrap port 22623 to start up"
+  wait_for:
+    port: 22623
+    host: "api-int.{{ cluster_domain_name }}"
+    delay: 1
+    timeout: 5000
+#  with_items: "{{ cluster_nodes['bootstrap'] }}"
+
+#- name: "wait for bootstrap port 22623 to start up"
+#  shell: "curl -XGET --head --silent https://{{item}}.{{ cluster_domain_name }}:22623/config/master -k"
+#  register: result
+#  until: result.stdout.find("200 OK") != -1
+#  retries: 1000
+#  delay: 3
+#  with_items: "{{ cluster_nodes['bootstrap'] }}"
+
+- name: Start up masters node
+  shell: "/opt/zthin/bin/smcli Image_Activate -T {{ item.vm_uname }}"
+  with_items: "{{ cluster_nodes.masters }}"
+  when: install_mode == 'zvm'
+
+- name: wait for master node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.masters }}"
+
+- name: Start up workers node
+  shell: "/opt/zthin/bin/smcli Image_Activate -T {{ item.vm_uname }}"
+  with_items: "{{ cluster_nodes.workers }}"
+  when: 
+    - not controller_schedulable
+    - install_mode == 'zvm'
+
+- name: wait for worker node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.workers }}"
+  when: not controller_schedulable
+#  when: cluster_nodes.workers is defined
+
+- name: wait for bootstrap complete
+  tags: config
+  shell: /usr/local/bin/openshift-install --dir=`pwd` wait-for bootstrap-complete --log-level debug
+  args:
+    chdir: "{{ workdir }}"
+  retries: 1
+  delay: 0
+
+- name: wait for install complete
+  tags: wait-install
+  shell: /usr/local/bin/openshift-install --dir=`pwd` wait-for install-complete
+  args:
+    chdir: "{{ workdir }}"
+  retries: 1
+  delay: 0

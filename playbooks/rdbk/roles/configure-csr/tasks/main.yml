@@ -1,0 +1,5 @@
+---
+# tasks file for configure-csr
+
+  - name: approve csr
+    shell: "/usr/local/bin/oc get csr -o name | xargs /usr/local/bin/oc adm certificate approve"

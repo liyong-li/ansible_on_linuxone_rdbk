@@ -1,0 +1,47 @@
+---
+# Sample module-level playbook of the IBM Z HMC Collection
+- name: Setup and initialize variables
+  set_fact:
+    all_sg_vols: "{{ [] }}"
+    sg_vols: "{{ [] }}"
+    sg_vol_nums: "{{ [] }}"
+    sg_lists: "{{ [] }}"
+
+- name: Create storage group list
+  set_fact:
+    sg_lists: "{{ sg_lists | default([]) + [{'name': item.stogroup_name,
+                                             'shared': item.shared,
+                                             'path': item.path,
+                                             'direct_connection_count': item.direct_connection_count,
+                                             'maxpart': item.maxpart }] | list | unique }}"
+  with_items:
+    - "{{ sgs }}"
+- name: Create component list
+  set_fact:
+    sg_vols: "{{ sg_vols | default([]) + [{'stogroup_name': item.0.stogroup_name, 
+                                            'vol_type': item.1.vol_type,
+                                            'vol_num': item.1.vol_num,
+                                            'vol_size': item.1.vol_size,
+                                            'volname_prefix': item.1.volname_prefix
+                                          }] }}"
+    sg_vol_nums: "{{ sg_vol_nums | default([]) + [ item.1.vol_num ] }}" 
+  with_subelements:
+    - "{{ sgs }}"
+    - vol_list
+
+- name: Reset the index
+  set_fact:
+    index1: 0
+
+- include: loopint.yml
+  with_items:
+    - "{{ sg_vol_nums }}"
+#  loop: "{{ query('sequence', 'start=1 end='+(sg_vols[target].vol_num)|string) }}"
+#  with_items: 
+#    - "{{ sg_vols }}"
+#  loop_control:
+#    loop_var: "{{ item.vol_num }}"
+
+- name: Print the result
+  debug:
+    var: all_sg_vols, sg_lists

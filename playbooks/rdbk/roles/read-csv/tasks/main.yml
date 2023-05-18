@@ -1,0 +1,7 @@
+---
+- name: Read CSV
+  #delegate_to: localhost 
+  #become: no
+  read_csv:
+     path:  "{{input_csv_path}}"
+  register: csv_input

@@ -1,0 +1,5 @@
+---
+- name: ocp disable kubeadmin 
+  hosts: rhel 
+  roles:
+  - ocp-day2-disable-kubeadmin

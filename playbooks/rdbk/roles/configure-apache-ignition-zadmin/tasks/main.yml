@@ -1,0 +1,121 @@
+---
+#- name: Setup and initialize variables
+#  set_fact:
+#    vols_list: "{{ [] }}"
+- name: unmanage resolve.conf in NetworkManager
+  lineinfile:
+    line: dns=none
+    dest: /etc/NetworkManager/NetworkManager.conf
+    insertafter: "\\[main\\].*"
+    regexp: "^dns=.*"
+
+- name: use local dns in resolv.conf
+  blockinfile:
+    dest: /etc/resolv.conf
+    insertbefore: BOF
+    block: |
+      search {{ cluster_domain_name }}
+      nameserver {{ dns_nameserver }}
+- name: install apache httpd jq 
+  yum:
+    name: httpd,jq
+    state: latest
+
+- name: bind httpd to port 8080
+  lineinfile:
+    dest: /etc/httpd/conf/httpd.conf
+    regexp: ^Listen 80
+    line: Listen 8080
+
+- name: restart httpd
+  service:
+    name: httpd.service
+    state: started
+    enabled: yes
+
+- name: allow traffic at 8080 for apache
+  tags: firewall
+  firewalld:
+    port: 8080/tcp
+    zone: "{{ item }}"
+    state: enabled
+    permanent: true
+  with_items:
+  - internal
+  - public
+  notify:
+   - restart firewalld
+
+- name: make bootfile dir
+  file:
+    path: "{{ bootfile_dest }}"
+    state: directory
+
+- name: make ignition config directory
+  file:
+    path: /var/www/html/rootfs
+    state: directory 
+
+#- name: download images
+#  get_url:
+#    url: "{{ rhcos_download_url }}/{{ item }}"
+#    dest: "/var/www/html/rootfs/{{ item }}"
+#    force: no
+#  with_items: '{{ rhcos_download_files }}'
+#  when: 
+#    - offline_mode is not defined 
+  #  - install_mode == 'zkvm'
+
+- name: Check if Rootfs image exist
+  stat:
+    path: "/var/www/html/rootfs/{{ rhcos_disk_image_short }}"
+  register: rootfs_exist
+
+- debug: 
+    var: rootfs_exist
+- name: set fact
+  set_fact: 
+     rhcos_download_url_actual: "{{rhcos_download_url_offline}}"
+  when: 
+    - not rootfs_exist.stat.exists 
+    - ocp_repo_type == "Offline"
+- name: set fact
+  set_fact: 
+     rhcos_download_url_actual: "{{rhcos_download_url}}"
+  when: 
+    - not rootfs_exist.stat.exists 
+    - ocp_repo_type != "Offline"
+
+#- debug: 
+#   var: ocp_repo_type == "Offline", rhcos_download_url, rhcos_download_url_offline, rhcos_download_url_actual
+- name: download rootfs image
+  get_url:
+    url: "{{ rhcos_download_url_actual }}/{{ item }}"
+    dest: "/var/www/html/rootfs/{{ rhcos_disk_image_short }}"
+    force: no
+  with_items: '{{ rhcos_rootfs_files }}' 
+  when: 
+    #- offline_mode is not defined 
+    - not rootfs_exist.stat.exists 
+  #retries: 3
+  #delay: 5
+  #register: result
+  #until: result.rc == 0
+
+#- debug: 
+    #var: result
+#- name: download images (offline)
+#  copy:
+#    src: "{{ rhcos_download_url_offline }}/{{ item }}"
+#    dest: "{{ bootfile_dest }}/{{ item }}"
+#    force: no
+#  with_items: '{{ rhcos_download_files }}'
+#  when: offline_mode is defined 
+
+#- name: download rootfs image (offline)
+#  copy:
+#    src: "{{ rhcos_download_url_offline }}/{{ item }}"
+#    dest: "/var/www/html/{{ rhcos_disk_image_short }}"
+#    force: no
+#  with_items: '{{ rhcos_rootfs_files }}'
+#  when: offline_mode is defined

@@ -1,0 +1,5 @@
+/**/
+{% set str = rhcos_version.split("-")[0] %}
+{% set str2 = str | replace('.','') %}
+{% set str3 = "OCP" + str2 %}
+INSTALL {{str3}} 1

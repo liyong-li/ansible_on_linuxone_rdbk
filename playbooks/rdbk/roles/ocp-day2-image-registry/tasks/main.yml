@@ -1,0 +1,14 @@
+---
+# tasks file for ocp-day2-image-registry
+
+- name: Change image-registry to use SC 
+  shell: /usr/local/bin/oc patch configs.imageregistry.operator.openshift.io/cluster --type merge --patch '{"spec":{"storage":{"pvc":{"claim":""}}}}'    
+
+- name: Change image-registry managementState to Managed
+  shell: /usr/local/bin/oc patch configs.imageregistry.operator.openshift.io/cluster --type merge -p '{"spec":{"managementState":"Managed"}}'
+
+- name: default route
+  shell: /usr/local/bin/oc patch configs.imageregistry.operator.openshift.io/cluster --type merge -p '{"spec":{"defaultRoute":true}}'
+
+#- name: annotate pvc 
+#  shell: oc patch pvc image-registry-storage -n openshift-image-registry -p '{"metadata":{"annotations":{"volume.beta.kubernetes.io/storage-class":"managed-nfs-storage"}}}'

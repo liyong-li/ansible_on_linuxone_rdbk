@@ -1,0 +1,37 @@
+---
+
+#- name: touch node-pxelinux file
+#  file:
+#    path: "{{ bootfile_dest }}/{{item.hostname}}-pxelinux.0"
+#    state: touch
+#  when: item.install_mode == 'zkvm'
+
+- name: generate parmfile
+  tags: pxelinux-cfg
+  template:
+    src: boot.prm.j2
+    dest: "{{ bootfile_dest }}/{{item.zvm_uname|upper}}.PRM"
+  when: item.install_mode == 'zvm'
+
+- name: generate user install
+  tags: pxelinux-cfg
+  template:
+    src: user.install.j2
+    dest: "{{ bootfile_dest }}/{{item.zvm_uname|upper}}.INSTALL"
+  when: item.install_mode == 'zvm'
+
+
+- name: generate user direct
+  tags: pxelinux-cfg
+  template:
+    src: user.direct.j2
+    dest: "{{ bootfile_dest }}/{{item.zvm_uname}}.DIRECT"
+  when: item.install_mode == 'zvm'
+
+#- name: make pxelinux.0 file
+#  tags: pxelinux0
+#  args:
+#    chdir: "{{ bootfile_dest }}"
+#  shell: bash /root/s390-tools/netboot/mk-s390image rhcos-{{ rhcos_version }}-installer-kernel -r rhcos-{{ rhcos_version }}-installer-initramfs.img -p {{item.hostname}}-pxelinux.parm {{item.hostname}}-pxelinux.0
+#  when: item.install_mode == 'zkvm'
+

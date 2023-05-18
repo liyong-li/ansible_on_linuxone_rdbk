@@ -1,0 +1,24 @@
+{% set bootstrap = cluster_nodes.bootstrap %}
+{% set masters = cluster_nodes.masters %}
+{% set workers = cluster_nodes.workers %}
+$TTL 900
+
+@ IN SOA {{dns_hostname}}.{{ cluster_domain_name }} hostmaster.{{ cluster_domain_name }}. (
+    2019062001 1D 1H 1W 3H
+  )      
+  IN NS {{dns_hostname}}.{{ cluster_domain_name }}.
+
+{% for item in masters %}
+{{ item.ip.split('.')[3] }} IN PTR {{ item.hostname }}.{{ cluster_domain_name }}.
+{% endfor %}
+
+{% if workers is defined %}
+{% for item in workers %}
+{{ item.ip.split('.')[3] }} IN PTR {{ item.hostname }}.{{ cluster_domain_name }}.
+{% endfor %}
+{% endif %}
+
+{% for item in bootstrap %}
+{{ item.ip.split('.')[3] }} IN PTR {{ item.hostname }}.{{ cluster_domain_name }}.
+{% endfor %}
+

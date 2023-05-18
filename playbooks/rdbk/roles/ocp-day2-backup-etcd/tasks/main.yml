@@ -1,0 +1,14 @@
+---
+# tasks file for ocp-day2-default-sc
+
+- name: backup etcd
+  shell: /usr/local/bin/oc debug node/{{controller_node}} -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/ocpbkp/
+  register: backup_etcd_output
+
+- debug: var=backup_etcd_output
+
+- name: change file mode
+  shell: /usr/local/bin/oc debug node/{{controller_node}} -- chroot /host chmod -R o+r /home/core/ocpbkp
+
+#- name: Get the backup
+#  shell: scp -rp core@{{controller_node}}:/home/core/ocpbkp /tmp/

@@ -1,0 +1,13 @@
+/**/                                          
+trace o                                   
+'pipe < ' userid() ' INSTALL * ',             
+ '| locate /INSTALL/ ',                      
+ '| var install'                              
+parse var install 'INSTALL' version flag .   
+say version                                   
+say flag                                      
+if flag == 1 then do                          
+  say "installing " version                   
+  'EXEC ' version                             
+end                                           
+exit 0                                        

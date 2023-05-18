@@ -1,0 +1,35 @@
+---
+# tasks file for configure-smcli
+
+- name: install libtirpc-devel
+  yum:
+    name: libtirpc-devel
+    state: latest
+- name: install git,make,gcc
+  yum:
+    name: git,make,gcc
+    state: latest
+
+- name: enable rdr
+  shell: "cio_ignore -r 00c; chccwdev -e 00c"
+
+- name: make bootfile dir
+  file:
+    path: "{{ bootfile_dest }}"
+    state: directory
+    
+- name: feilong not present
+  ansible.builtin.file:
+    path: "{{ bootfile_dest }}/feilong"
+    state: "absent"
+
+- name: git clone feilong
+  shell: "git clone https://github.com/openmainframeproject/feilong.git"
+  args:
+    chdir: "{{ bootfile_dest }}"
+
+- name: build zthin
+  shell: "cd feilong/zthin-parts; OS_IS_RHEL8=1 make; make install; make post"
+  args:
+    chdir: "{{ bootfile_dest }}"
+

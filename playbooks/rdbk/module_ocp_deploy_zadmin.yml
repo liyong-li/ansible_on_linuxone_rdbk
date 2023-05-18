@@ -1,0 +1,61 @@
+- name: 1.prepare the parm files
+  hosts: localhost
+  roles:
+  - configure-ocp-parm-zadmin
+
+- hosts:
+    - localhost
+  gather_facts: no
+  tasks:
+    - name: Add a host alias for dns
+      add_host:
+        hostname: 'dns_tmp'
+        groups: dns
+        ansible_ssh_host: '{{ dns_nameserver }}'
+
+- name: 2.create ocp4 cluster (dns)
+  hosts: dns_tmp
+  become: yes
+  become_user: root
+  roles:
+  - configure-dns-zadmin
+
+- hosts:
+    - localhost
+  gather_facts: no
+  tasks:
+    - name: Add a host alias for dns
+      add_host:
+        hostname: 'haproxy_tmp'
+        groups: haproxy
+        ansible_ssh_host: '{{ haproxy_server }}'
+
+- name: 3.create ocp4 cluster (haproxy)
+  hosts: haproxy_tmp
+  become: yes
+  become_user: root
+  roles:
+  - configure-haproxy-zadmin
+- hosts:
+    - localhost
+  gather_facts: no
+  tasks: 
+    - name: Add a host alias 
+      add_host:
+        hostname: 'bastion_tmp'
+        groups: bastion
+        ansible_ssh_host: '{{ bastion_private_ip_address }}'
+
+- name: 4.create ocp4 cluster (dns-haproxy-ignition)
+  hosts: bastion_tmp
+  roles:
+  - configure-apache-ignition-zadmin
+  - create-cluster-zadmin
+
+  
+
+- name: prepare the parm files
+  hosts: localhost
+  roles:
+  - ocp-define-cluster-zadmin
+  - ocp-start-cluster-zadmin

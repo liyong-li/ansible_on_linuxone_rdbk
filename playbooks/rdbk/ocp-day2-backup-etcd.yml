@@ -1,0 +1,7 @@
+---
+- name: ocp backup etcd
+  hosts: rhel 
+  become: yes
+  become_user: root
+  roles:
+  - ocp-day2-backup-etcd

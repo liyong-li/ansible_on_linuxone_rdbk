@@ -1,0 +1,70 @@
+#version=RHEL8
+# Use graphical install
+text --non-interactive
+
+repo --name="AppStream" --baseurl={{linux_inst_repo}}/AppStream
+
+%packages
+@^minimal-environment
+kexec-tools
+
+%end
+
+# Keyboard layouts
+keyboard --xlayouts='us'
+# System language
+lang en_US.UTF-8
+
+# Network information
+network  --hostname={{item.hostname}}
+
+# Use network installation
+url --url="{{linux_inst_repo}}/BaseOS"
+
+# Run the Setup Agent on first boot
+firstboot --disable
+eula --agreed
+reboot
+# Do not configure the X Window System
+skipx
+
+ignoredisk --only-use=mpatha,sda,sdb,sdc,sdd
+# Clear the Master Boot Record
+zerombr
+# Partition clearing information
+clearpart --all --initlabel --drives=mpatha --cdl
+bootloader --append="crashkernel=auto" --location=mbr --boot-drive=mpatha
+
+#Create partition and LVM
+part /boot --fstype="xfs" --ondisk=mpatha --size=1000
+part pv.1929 --fstype="lvmpv" --ondisk=mpatha --size=9000 --grow
+
+volgroup rootvg --pesize=4096 pv.1929
+logvol / --fstype="xfs" --size=9000 --name=root --vgname=rootvg
+
+#part /boot --fstype="xfs" --ondisk=mpatha --size=1024
+#part pv.1929 --fstype="lvmpv" --ondisk=mpatha --size=1024 --grow
+
+#volgroup rootvg --pesize=4096 pv.1929
+#logvol / --fstype="xfs" --size=10240 --name=root --vgname=rootvg
+#logvol swap --fstype="swap" --size=16384 --name=swap --vgname=rootvg
+#logvol /var --fstype="xfs" --size=20480 --name=var --vgname=rootvg
+#logvol /home --fstype="xfs" --size=20480 --name=home --vgname=rootvg
+#logvol /tmp --fstype="xfs" --size=20480 --name=tmp --vgname=rootvg
+#logvol /usr --fstype="xfs" --size=10240 --name=usr --vgname=rootvg
+
+# System timezone
+timezone Asia/Singapore
+
+# Root password
+rootpw --iscrypted $6$sgdEiuPz3e.Tz8Hm$sMnO0E.AslOKmX/dkQs9oh/9PFIWg/LPr.zFi46Q3c/ShXDTgCAuwd55c.F2zyuVH8g6UQHcy9q4FgvMANiHr0
+
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end

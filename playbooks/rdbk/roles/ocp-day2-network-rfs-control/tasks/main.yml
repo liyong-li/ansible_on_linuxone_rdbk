@@ -1,0 +1,18 @@
+---
+# tasks file for ocp-day2-network-rfs
+
+- name: create openshift workdir
+  file:
+    path: "{{ workdir }}/rfs"
+    state: "directory"
+
+- name: create yaml files
+  template:
+    dest: "{{ workdir }}/rfs/{{ item }}"
+    src: "{{ item }}.j2"
+  with_items:
+  - enable-rfs-control.yaml
+
+- name: Apply enable-rfs
+  shell: "/usr/local/bin/oc apply -f {{ workdir }}/rfs/enable-rfs-control.yaml"    
+

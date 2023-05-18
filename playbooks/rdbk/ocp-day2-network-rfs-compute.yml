@@ -1,0 +1,20 @@
+---
+- hosts:
+    - localhost
+  gather_facts: no
+  tasks: 
+    - name: Add a host alias 
+      add_host:
+        hostname: 'bastion_tmp'
+        groups: bastion
+        ansible_ssh_host: '{{ bastion_private_ip_address }}'
+- name: ocp network-rfs 
+  hosts: bastion_tmp 
+  #become: yes
+  #become_user: root
+  roles:
+  - ocp-day2-network-rfs-compute
+
+
+#ssh core@ocpw1 sudo cat /proc/sys/net/core/rps_sock_flow_entries
+#ssh core@ocpw1 sudo cat /sys/class/net/enc1000/queues/rx-0/rps_flow_cnt

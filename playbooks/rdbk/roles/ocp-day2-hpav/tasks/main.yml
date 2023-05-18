@@ -1,0 +1,18 @@
+---
+# tasks file for ocp-day2-hpav
+
+- name: create openshift workdir
+  file:
+    path: "{{ workdir }}/hpav"
+    state: "directory"
+
+- name: create yaml files
+  template:
+    dest: "{{ workdir }}/hpav/{{ item }}"
+    src: "{{ item }}.j2"
+  with_items:
+  - 05-master-kernelarg-hpav.yaml
+
+- name: Apply disable-thp
+  shell: "/usr/local/bin/oc apply -f {{ workdir }}/hpav/05-master-kernelarg-hpav.yaml"    
+

@@ -1,0 +1,187 @@
+---
+#- name: Setup and initialize variables
+#  set_fact:
+#    vols_list: "{{ [] }}"
+- name: install apache httpd jq ftp
+  yum:
+    name: httpd,jq,ftp
+    state: latest
+
+- name: bind httpd to port 8080
+  lineinfile:
+    dest: /etc/httpd/conf/httpd.conf
+    regexp: ^Listen 80
+    line: Listen 8080
+
+- name: restart httpd
+  service:
+    name: httpd.service
+    state: started
+    enabled: yes
+
+- name: allow traffic at 8080 for apache
+  tags: firewall
+  firewalld:
+    port: 8080/tcp
+    zone: "{{ item }}"
+    state: enabled
+    permanent: true
+  with_items:
+  - internal
+  - public
+  notify:
+   - restart firewalld
+
+- name: make bootfile dir
+  file:
+    path: "{{ bootfile_dest }}"
+    state: directory
+
+- name: download images
+  get_url:
+    url: "{{ rhcos_download_url }}/{{ item }}"
+    dest: "{{ bootfile_dest }}/{{ item }}"
+    force: no
+  with_items: '{{ rhcos_download_files }}'
+  when: offline_mode is not defined 
+
+- name: make ignition config directory
+  file:
+    path: /var/www/html/rootfs
+    state: directory 
+
+- name: Check if Rootfs image exist
+  stat:
+    path: "/var/www/html/rootfs/{{ rhcos_disk_image_short }}"
+  register: rootfs_exist
+
+- name: download rootfs image
+  get_url:
+    url: "{{ rhcos_download_url }}/{{ item }}"
+    dest: "/var/www/html/rootfs/{{ rhcos_disk_image_short }}"
+    force: no
+  with_items: '{{ rhcos_rootfs_files }}' 
+  when: offline_mode is not defined and rootfs_exist.stat.exists 
+
+- name: download images (offline)
+  copy:
+    src: "{{ rhcos_download_url_offline }}/{{ item }}"
+    dest: "{{ bootfile_dest }}/{{ item }}"
+    force: no
+  with_items: '{{ rhcos_download_files }}'
+  when: offline_mode is defined 
+
+- name: download rootfs image (offline)
+  copy:
+    src: "{{ rhcos_download_url_offline }}/{{ item }}"
+    dest: "/var/www/html/{{ rhcos_disk_image_short }}"
+    force: no
+  with_items: '{{ rhcos_rootfs_files }}'
+  when: offline_mode is defined
+
+- block:
+  - name: install git
+    dnf:
+      name:
+      - git
+      - file
+      state: latest
+    when: install_mode == 'zkvm'
+
+  - name: clone s390x-tools
+    shell: git clone https://github.com/ibm-s390-tools/s390-tools.git
+    args:
+      chdir: /root
+      creates: /root/s390-tools
+    when: install_mode == 'zkvm'
+
+  - name: generate pxelinux0 entry (bootstrap)
+    vars:
+      coreos_role: bootstrap
+      
+    include_tasks: generate_pxelinux0.yml
+    with_items: "{{ cluster_nodes[coreos_role] }}"
+
+  - name: generate pxelinux0 entry (masters)
+    vars:
+      coreos_role: masters
+    include_tasks: generate_pxelinux0.yml
+    with_items: "{{ cluster_nodes[coreos_role] }}"
+
+  - name: generate pxelinux0 entry (workers)
+    vars:
+      coreos_role: workers 
+    include_tasks: generate_pxelinux0.yml
+    with_items: "{{ cluster_nodes[coreos_role] }}"
+    when: cluster_nodes.workers is defined
+
+#  - name: Setup and initialize variables
+#    set_fact:
+#      vols_list: "{{ [] }}"
+
+  - name: Create bootstrap disk list
+    vars:
+      coreos_role: bootstrap
+    template:
+      src: lnxmaint.disk.list.j2
+      dest: "{{ bootfile_dest }}/{{ coreos_role }}.list"
+    with_items:
+      - "{{ cluster_nodes[coreos_role] }}"
+
+  - name: Create masters disk list
+    vars:
+      coreos_role: masters
+    template:
+      src: lnxmaint.disk.list.j2
+      dest: "{{ bootfile_dest }}/{{ coreos_role }}.list"
+    with_items:
+      - "{{ cluster_nodes[coreos_role] }}"
+
+  - name: Create workers disk list
+    vars:
+      coreos_role: workers
+    template:
+      src: lnxmaint.disk.list.j2
+      dest: "{{ bootfile_dest }}/{{ coreos_role }}.list"
+    with_items:
+      - "{{ cluster_nodes[coreos_role] }}"
+    when: cluster_nodes.workers is defined
+
+#  - debug: var=vols_list
+
+  - name: generate LNXMAINT FORMAT10
+    template:
+      src: lnxmaint.format10.exec.j2
+      dest: "{{ bootfile_dest }}/FORMAT10.EXEC"
+
+  - name: generate LNXMAINT DISK LIST
+    shell: "cat {{ bootfile_dest }}/{{ item }}.list >> {{ bootfile_dest }}/DISK.LIST"
+    with_items: 
+      - bootstrap
+      - masters
+
+  - name: generate LNXMAINT DISK LIST if any workers
+    shell: "cat {{ bootfile_dest }}/{{ item }}.list >> {{ bootfile_dest }}/DISK.LIST"
+    with_items: 
+      - workers
+    when: cluster_nodes.workers is defined
+
+  - name: generate ftp script
+    template:
+      src: ftp.sh.j2
+      dest: /usr/local/bin/ftp.sh
+      mode: a+x
+    when: install_mode == 'zvm'
+       
+  - name: run ftp script
+    command: "/usr/local/bin/ftp.sh"
+    register: script_output
+    when: install_mode == 'zvm'
+ 
+  - debug: var=script_output.stdout_lines
+    when: install_mode == 'zvm'
+
+- name: Restart firewalld.service
+  service:
+    name: firewalld.service
+    state: restarted

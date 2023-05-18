@@ -1,0 +1,46 @@
+---
+# tasks file for create-cluster
+- name: Add a host alias 
+  add_host:
+    hostname: "zvmagent1"
+    groups: "zvmagent1"
+    ansible_ssh_host: 'item.vm_agent'
+
+
+- name: set fact
+  set_fact: 
+    host1: "{{item.vm_agent}}"
+
+- name: backup user directory entry for Linux 
+  delegate_to: "{{ host1}}"
+  shell: /opt/zthin/bin/smcli Image_Query_DM -T {{ item.vm_uname|quote }} > /tmp/{{item.vm_uname|upper}}.DIRECT
+  ignore_errors: True 
+  when: item.install_mode == 'zvm'
+
+- name: shutdown the VM 
+  delegate_to: "{{ host1}}"
+  shell: /opt/zthin/bin/smcli Image_Deactivate -T {{ item.vm_uname|quote }} -f IMMED  
+  ignore_errors: True 
+  when: item.install_mode == 'zvm'
+
+- name: Delete user directory entry for Linux 
+  delegate_to: "{{ host1}}"
+  shell: /opt/zthin/bin/smcli Image_Delete_DM -T {{ item.vm_uname|quote }} -e 1
+  ignore_errors: True 
+  when: item.install_mode == 'zvm'
+
+- name: destroy KVM resources
+  delegate_to: "{{ host1}}"
+  tags: delete_bastion, reset ocp
+  ansible.builtin.shell: |
+    virsh destroy {{ item.vm_uname }} 
+  ignore_errors: True 
+  when: item.install_mode == 'zkvm'
+
+- name: undefine KVM resources
+  delegate_to: "{{ host1}}"
+  tags: delete_bastion, reset ocp
+  ansible.builtin.shell: |
+    virsh undefine {{ item.vm_uname }} --remove-all-storage
+  ignore_errors: True 
+  when: item.install_mode == 'zkvm'

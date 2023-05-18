@@ -1,0 +1,52 @@
+---
+# tasks file for configure-nfs
+
+    - name: install nfs-utils
+      yum: name=nfs-utils state=latest
+
+    - name: Create a mountable directory if it does not exist
+      file:
+        path: /home/data/nfs_share
+        state: directory
+#        owner: vagrant
+#        group: vagrant
+#        mode: '0775'
+    - name: enable rpcbind nfs-server
+      service:
+        name: "{{ item }}"
+        enabled: yes
+      with_items:
+        - rpcbind
+        - nfs-server
+    - name: Copy exports file.
+      template:
+        src: exports.j2
+        dest: /etc/exports
+        owner: root
+        group: root
+        mode: 0644
+    - name: NFS apply change configrue
+      shell: systemctl restart nfs-server;exportfs -a
+
+
+    - name: add nfs-server to firewall
+      firewalld:
+        permanent: true
+        service: nfs
+        state: enabled
+        zone: "{{ item }}"
+      with_items:
+        - internal
+        - public
+
+    - name: Restart nfs-server.service
+      service:
+        name: nfs-server.service
+        state: restarted
+        enabled: true
+
+    - name: Restart firewalld.service
+      service:
+        name: firewalld.service
+        state: restarted
+        enabled: true    

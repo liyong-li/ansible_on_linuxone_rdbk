@@ -1,0 +1,2 @@
+part_type,part_name,part_ifl_num,part_min_memory,part_max_memory,part_init_weight,os_version,os_version_short,repo_type,ftpserver,ftp_username,ftp_password,ins_path,ip,netmask,gw,hostname,vlanid,sg_name,nic_name,nic_adapter_name,nic_port,nic_desc,nic_addr
+linux,install86,2,12000,128000,50,rhel86,rhel8,FTP,172.83.4.227,demoftp,demoftp,iso/install/ins,172.83.4.19,24,172.83.4.253,install86,none,TEST_CMP3,nic_1000,OSD 012C A01B-15,0,data network,1000

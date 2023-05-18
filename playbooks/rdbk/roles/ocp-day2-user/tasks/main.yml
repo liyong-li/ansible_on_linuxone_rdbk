@@ -1,0 +1,50 @@
+---
+# tasks file for ocp-day2-user 
+
+- name: create openshift workdir
+  file:
+    path: "{{ workdir }}"
+    state: "directory"
+
+- name: create htpasswd secret file
+  shell: "htpasswd -c -B -b {{ workdir }}/users.htpasswd admin001 {{ ocp_user_password }}"
+
+- name: create htpasswd secret file
+  shell: "htpasswd -B -b {{ workdir }}/users.htpasswd app001 {{ ocp_user_password }} "
+
+- name: create ocp secret
+  shell: "/usr/local/bin/oc create secret generic {{ ocp_idp_users_secret }} --from-file=htpasswd={{ workdir }}/users.htpasswd -n openshift-config" 
+
+- name: create ocp cr for user
+  template:
+    dest: "{{ workdir }}/{{ item }}"
+    src: users-cr.yaml.j2
+  with_items:
+  - users-cr.yaml 
+
+- name: ocp apply cr yaml
+  shell: "/usr/local/bin/oc apply -f {{ workdir }}/users-cr.yaml"  
+
+- name: ocp create user 
+  shell: "/usr/local/bin/oc create user admin001"
+
+- name: ocp create identity
+  shell: "/usr/local/bin/oc create identity {{ ocp_idp }}:admin001" 
+
+- name: ocp assign the user as cluster-admin
+  shell: "/usr/local/bin/oc adm policy add-cluster-role-to-user cluster-admin admin001" 
+
+- name: ocp assign the user as cluster-admin
+  shell: "/usr/local/bin/oc create useridentitymapping {{ ocp_idp }}:admin001 admin001"    
+
+- name: ocp create user 
+  shell: "/usr/local/bin/oc create user app001"
+
+- name: ocp create identity
+  shell: "/usr/local/bin/oc create identity {{ ocp_idp }}:app001" 
+
+- name: ocp assign the user as cluster-admin
+  shell: "/usr/local/bin/oc adm policy add-cluster-role-to-user cluster-admin app001" 
+
+- name: ocp assign the user as cluster-admin
+  shell: "/usr/local/bin/oc create useridentitymapping {{ ocp_idp }}:app001 app001"    

@@ -1,0 +1,66 @@
+---
+# tasks file for create-cluster
+- name: Add a host alias 
+  add_host:
+    hostname: "zvmagent1"
+    groups: "zvmagent1"
+    ansible_ssh_host: 'item.vm_agent'
+  when: item.install_mode == 'zvm'
+
+- name: set fact
+  set_fact: 
+    host1: "{{item.vm_agent}}"
+  when: item.install_mode == 'zvm'
+
+- name: make bootfile dir
+  delegate_to: "{{host1}}"
+  file:
+    path: "{{ bootfile_dest }}"
+    state: directory
+  when: item.install_mode == 'zvm'
+
+- name: copy PROFILE EXEC to zVM minidisk
+  delegate_to: "{{host1}}"
+  become: yes
+  become_user: root
+  tags: linux-cfg
+  shell: rm -rf /mnt/lnxmaint/PROFILE.EXEC ; cp --sparse=never "{{ bootfile_dest }}/PROFILE.EXEC" /mnt/lnxmaint/ ; sync ; sync
+  register: cmd_output
+  when: item.install_mode == 'zvm'
+- debug: 
+    var: cmd_output
+  when: item.install_mode == 'zvm'
+- name: copy PRM to zVM minidisk
+  delegate_to: "{{host1}}"
+  become: yes
+  become_user: root
+  tags: linux-cfg
+  shell: rm -rf /mnt/lnxmaint/{{item.vm_uname|upper}}.PRM ; cp --sparse=never "{{ bootfile_dest }}/{{item.vm_uname|upper}}.PRM" /mnt/lnxmaint/ ; sync ; sync
+  register: cmd_output
+  when: item.install_mode == 'zvm'
+- debug: 
+    var: cmd_output
+  when: item.install_mode == 'zvm'
+- name: copy USER INSTALL to zVM minidisk
+  delegate_to: "{{host1}}"
+  become: yes
+  become_user: root
+  tags: linux-cfg
+  shell: rm -rf /mnt/lnxmaint/{{item.vm_uname|upper}}.INSTALL ; cp --sparse=never "{{ bootfile_dest }}/{{item.vm_uname|upper}}.INSTALL" /mnt/lnxmaint/ ; sync ; sync
+  register: cmd_output
+  when: item.install_mode == 'zvm'
+- debug: 
+    var: cmd_output
+  when: item.install_mode == 'zvm'
+
+- name: only execute on correct system
+  shell: "cat /proc/sysinfo | grep 'VM00 Name:'"
+  register: out_node
+  when: item.install_mode == 'zvm'
+- name: create user directory entry for Linux 
+  delegate_to: "{{host1}}"
+  #delegate_to: "{{ zvmagent}}"
+  vars:
+    vm_name: "{{item.vm_uname|upper}}"
+  shell: /opt/zthin/bin/smcli Image_Create_DM -T {{ vm_name|quote }} -f {{ bootfile_dest }}/{{vm_name}}.DIRECT
+  when: item.install_mode == 'zvm' and "item.vm_node in out_node.stdout"

@@ -1,0 +1,7 @@
+- name: 1.update.user.direct.after.installation
+  hosts: localhost
+  #hosts: zvmagent_tmp
+  #become: yes
+  #become_user: root
+  roles:
+  - ocp-update-user-direct-zadmin

@@ -1,0 +1,105 @@
+---
+#- name: Setup and initialize variables
+#  set_fact:
+#    vols_list: "{{ [] }}"
+
+- name: start entry (bootstrap)
+  vars:
+    coreos_role: bootstrap
+  include_tasks: b0_startup.yml
+  with_items: "{{ cluster_nodes.bootstrap }}"
+#  when: install_mode == 'zvm'
+- name: start entry (bootstrap)
+  vars:
+    coreos_role: bootstrap
+  include_tasks: b0_startup_kvm.yml
+  with_items: "{{ cluster_nodes.bootstrap }}"
+
+- name: wait for bootstrap node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.bootstrap }}"
+
+- name: "wait for bootstrap port 22623 to start up"
+  wait_for:
+    port: 22623
+    host: "{{item.ip}}"
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.bootstrap }}"
+
+# host: api-int.{{ cluster_domain_name }}
+#- name: "wait for bootstrap port 22623 to start up"
+#  shell: "curl -XGET --head --silent https://{{item}}.{{ cluster_domain_name }}:22623/config/master -k"
+#  register: result
+#  until: result.stdout.find("200 OK") != -1
+#  retries: 1000
+#  delay: 3
+#  with_items: "{{ cluster_nodes['bootstrap'] }}"
+
+- name: start entry (controller)
+  vars:
+    coreos_role: masters
+  include_tasks: b0_startup.yml
+  with_items: "{{ cluster_nodes.masters }}"
+#  when: install_mode == 'zvm'
+- name: start entry (controller)
+  vars:
+    coreos_role: masters
+  include_tasks: m0_startup_kvm.yml
+  with_items: "{{ cluster_nodes.masters }}"
+
+- name: wait for master node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.masters }}"
+
+- name: start entry (workers)
+  vars:
+    coreos_role: workers
+  include_tasks: b0_startup.yml
+  with_items: "{{ cluster_nodes.workers }}"
+  when: 
+    - not controller_schedulable
+#    - install_mode == 'zvm'
+- name: start entry (worker)
+  vars:
+    coreos_role: workers
+  include_tasks: w0_startup_kvm.yml
+  with_items: "{{ cluster_nodes.workers }}"
+
+- name: wait for worker node accessibility
+  wait_for:
+    port: 22
+    host: "{{ item.ip }}"
+    search_regex: OpenSSH
+    delay: 1
+    timeout: 5000
+  with_items: "{{ cluster_nodes.workers }}"
+  when: not controller_schedulable
+#  when: cluster_nodes.workers is defined
+
+
+#- name: wait for bootstrap complete
+#  tags: config
+#  shell: /usr/local/bin/openshift-install --dir=`pwd` wait-for bootstrap-complete --log-level debug
+#  args:
+#    chdir: "{{ workdir }}"
+#  retries: 1
+#  delay: 0
+
+#- name: wait for install complete
+#  tags: wait-install
+#  shell: /usr/local/bin/openshift-install --dir=`pwd` wait-for install-complete
+#  args:
+#    chdir: "{{ workdir }}"
+#  retries: 1
+#  delay: 0

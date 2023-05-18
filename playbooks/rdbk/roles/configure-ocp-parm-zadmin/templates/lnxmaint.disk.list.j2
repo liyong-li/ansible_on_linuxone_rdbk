@@ -1,0 +1,5 @@
+{% for server in item %}
+#{{ server }}
+{% set obj = item.zfcp_disk %}
+{{ obj[0] }}
+{% endfor %}

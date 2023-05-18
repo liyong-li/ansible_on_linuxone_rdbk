@@ -1,0 +1,32 @@
+{% set vm_obj = linux_nodes[coreos_role][item]%}
+{% set standby = vm_obj.max_mem - vm_obj.init_mem %}
+USER {{ vm_obj.zvm_uname }} LBYONLY {{vm_obj.init_mem}}G {{vm_obj.max_mem}}G G                             
+   INCLUDE INSTALL                                             
+   COMMAND DEF STOR {{vm_obj.init_mem}}G STANDBY {{standby}}G 
+   COMMAND TERM MORE 0 0 
+   COMMAND TERM HOLD OFF                          
+   CPU 00 BASE
+{% for i in range(vm_obj.vcpu-1)%}
+   CPU {{'%02x' % (i+1)}} 
+{% endfor %}
+   LOGONBY IBMVM1                                        
+   MACHINE ESA 32
+   IPL CMS PARM AUTOCR
+{% set sg_obj = result.storage_group %}
+{% set vols_obj = sg_obj['storage-volumes'] %}
+{% set fcpdev = [] %}
+{% for vols_item in vols_obj %}
+{% if vols_item.usage == 'boot' %}
+{% set paths_obj = vols_item.paths %}
+   LOADDEV PORTname {{ paths_obj[0]['target-world-wide-port-name']}} 
+   LOADDEV LUN {{ paths_obj[0]['logical-unit-number']}} 
+{% for paths_item in paths_obj %}
+{% if fcpdev.append(paths_item['device-number']) %} {% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% set uniq_fcpdev =  fcpdev|unique %}
+{% for uniq_fcpdev_item in uniq_fcpdev %}
+   DEDICATE {{ uniq_fcpdev_item }} {{ uniq_fcpdev_item }}
+{% endfor %}
+   NICDEF 1000 TYPE QDIO DEVICES 3 LAN SYSTEM VSW1

@@ -1,0 +1,5 @@
+---
+# tasks file for disable kubeadmin 
+
+  - name: disable kubeadmin
+    shell: "oc delete secrets kubeadmin -n kube-system"

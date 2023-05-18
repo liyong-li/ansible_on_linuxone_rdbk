@@ -1,0 +1,13 @@
+
+- name: Create component list
+  set_fact:
+    all_sg_vols: "{{ all_sg_vols | default([]) + [sg_vols[index1|int]] }}"
+  with_sequence: start=1 end={{ sg_vols[index1|int].vol_num }}
+
+- name: Reset the index
+  set_fact:
+    index1: "{{ index1 | int + 1 }}"
+
+#- name: Print the result
+#  debug:
+#    var: all_sg_vols  

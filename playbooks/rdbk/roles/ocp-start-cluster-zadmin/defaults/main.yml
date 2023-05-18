@@ -1,0 +1,9 @@
+---
+# defaults file for create-cluster
+workdir: ~/ocp4-workdir
+install_mode: zvm
+url_kvm1: http://172.83.4.18:8080
+bootfile_dest: "{{ bootfile_dest_dict[install_mode] }}"
+bootfile_dest_dict:
+  zkvm: /root/ocp
+  zvm: /root/ocp

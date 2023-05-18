@@ -1,0 +1,26 @@
+---
+# tasks file for ocp-day2-user 
+
+- name: create openshift workdir
+  file:
+    path: "{{ workdir }}/nfs-client"
+    state: "directory"
+
+- name: create yaml files
+  template:
+    dest: "{{ workdir }}/nfs-client/{{ item }}"
+    src: "{{ item }}.j2"
+  with_items:
+  - deployment.yaml 
+  - sc.yaml 
+  - rbac.yaml 
+
+- name: create namespace
+  shell: "/usr/local/bin/oc new-project nfs-client-provisioner"
+
+- name: ocp apply yaml
+  shell: "/usr/local/bin/oc apply -f {{ workdir }}/nfs-client"  
+
+- name: Grant authority
+  shell: "/usr/local/bin/oc adm policy add-scc-to-user hostmount-anyuid system:serviceaccount:nfs-client-provisioner:nfs-client-provisioner"
+

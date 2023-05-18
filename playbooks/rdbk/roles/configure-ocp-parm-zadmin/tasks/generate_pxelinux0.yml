@@ -1,0 +1,117 @@
+---
+
+- name: Add a host alias 
+  add_host:
+    hostname: "zvmagent1"
+    groups: "zvmagent1"
+    ansible_ssh_host: 'item.vm_agent'
+
+- name: set fact
+  set_fact: 
+    host1: "{{item.vm_agent}}"
+
+#- name: set fact
+#  set_fact: 
+#    host1: "localhost"
+
+#- block:
+#- name: install git
+#  delegate_to: "{{host1}}"
+#  dnf:
+#    name:
+#    - git
+#    - file
+#    state: latest
+#  when: item.install_mode == 'zkvm'
+#- name: clone s390x-tools
+#  delegate_to: "{{host1}}"
+#  shell: git clone https://github.com/ibm-s390-tools/s390-tools.git
+#  args:
+#    chdir: ~
+#    creates: ~/s390-tools
+#  when: item.install_mode == 'zkvm'
+
+- name: make bootfile dir
+  delegate_to: "{{host1}}"
+  file:
+    path: "{{ bootfile_dest }}"
+    state: directory
+
+#- name: touch node-pxelinux file
+#  file:
+#    path: "{{ bootfile_dest }}/{{item.hostname}}-pxelinux.0"
+#    state: touch
+#  when: item.install_mode == 'zkvm'
+
+- name: generate parmfile
+  delegate_to: "{{host1}}"
+  tags: pxelinux-cfg
+  template:
+    src: boot.prm.j2
+    dest: "{{ bootfile_dest }}/{{item.vm_uname|upper}}.PRM"
+  when: item.install_mode == 'zvm'
+
+- name: generate user install
+  delegate_to: "{{host1}}"
+  tags: pxelinux-cfg
+  template:
+    src: user.install.j2
+    dest: "{{ bootfile_dest }}/{{item.vm_uname|upper}}.INSTALL"
+  when: item.install_mode == 'zvm'
+
+
+
+- name: generate user direct
+  delegate_to: "{{host1}}"
+  tags: pxelinux-cfg
+  template:
+    src: user.direct.j2
+    dest: "{{ bootfile_dest }}/{{item.vm_uname}}.DIRECT"
+  when: item.install_mode == 'zvm'
+
+#- name: make pxelinux.0 file
+#  tags: pxelinux0
+#  args:
+#    chdir: "{{ bootfile_dest }}"
+#  shell: bash /root/s390-tools/netboot/mk-s390image rhcos-{{ rhcos_version }}-installer-kernel -r rhcos-{{ rhcos_version }}-installer-initramfs.img -p {{item.hostname}}-pxelinux.parm {{item.hostname}}-pxelinux.0
+#  when: item.install_mode == 'zkvm'
+
+- name: generate profile exec
+  delegate_to: "{{host1}}"
+  tags: pxelinux-cfg
+  template:
+    src: lnxmaint.profile.exec.j2
+    dest: "{{ bootfile_dest }}/PROFILE.EXEC"
+  when: item.install_mode == 'zvm'
+
+#- name: Check if kernel exist
+#  delegate_to: "{{host1}}"
+#  stat:
+#    path: "{{bootfile_dest}}/{ rhcos_installer_kernel }}"
+#  register: kernel_exist
+
+#- name: download kernel image
+#  delegate_to: "{{host1}}"
+#  get_url:
+#    url: "{{ rhcos_download_url }}/{{ rhcos_installer_kernel }}"
+#    dest: "{{bootfile_dest}}{{ rhcos_installer_kernel }}"
+#    force: no
+#  when: 
+#    - offline_mode is not defined 
+#    - not kernel_exist.stat.exists 
+
+#- name: Check if initrd exist
+#  delegate_to: "{{host1}}"
+#  stat:
+#    path: "{{bootfile_dest}}/{ rhcos_installer_initramfs }}"
+#  register: initrd_exist
+
+#- name: download initrd image
+#  delegate_to: "{{host1}}"
+#  get_url:
+#    url: "{{ rhcos_download_url }}/{{ rhcos_installer_initramfs }}"
+#    dest: "{{bootfile_dest}}{{ rhcos_installer_initramfs }}"
+#    force: no
+#  when: 
+#    - offline_mode is not defined 
+#    - not initrd_exist.stat.exists 

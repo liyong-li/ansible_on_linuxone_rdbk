@@ -1,0 +1,59 @@
+---
+# tasks file for configure-yum
+
+- name: Add a host alias 
+  add_host:
+    hostname: "zvmagent1"
+    groups: "zvmagent1"
+    ansible_ssh_host: "{{target_ip}}"
+    ansible_ssh_user: 'root'
+    ansible_ssh_pass: 'dfltpass'
+
+#- name: set fact
+#  set_fact: 
+#    host1: "{{target_ip}}"
+
+#- name: set ip address
+#  set_fact: 
+#    vm_ip: "{{hostvars[inventory_hostname]['ansible_default_ipv4']['address']}}"
+
+- name: scan ssh keys
+  #delegate_to: localhost
+  shell: ssh-keyscan {{target_ip}} >> /data/known_hosts
+  
+- name: Make sure we have a 'zadmin' group
+  delegate_to: zvmagent1
+  group:
+    name: zadmin
+    state: present
+
+- name: Allow 'wheel' group to have passwordless sudo
+  delegate_to: zvmagent1
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%wheel'
+    line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+    validate: 'visudo -cf %s'
+
+- name: Add zadmin user to wheel group
+  delegate_to: zvmagent1
+  user:
+    name=zadmin
+    groups=wheel
+    append=yes
+    state=present
+    createhome=yes
+
+#- name: Set up authorized keys for the deployer user - zadmin
+#  shell: "/usr/bin/sshpass -p dfltpass root@{{target_ip}} cat {{item}} >> "
+- name: Set up authorized keys for the deployer user - zadmin
+  delegate_to: zvmagent1
+  authorized_key: user=zadmin key="{{item}}"
+  with_file:
+    - ~/.ssh/id_rsa.pub 
+
+#- name: Add VM host key to known hosts
+#  delegate_to: localhost
+#  shell: "ssh-keyscan -H {{target_ip}}  >> /data/known_hosts"
+

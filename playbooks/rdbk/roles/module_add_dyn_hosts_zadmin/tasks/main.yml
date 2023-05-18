@@ -1,0 +1,9 @@
+---
+
+- name: Add dyn hosts
+  include_tasks: add_drp_hosts.yml 
+  when: item.type[0] != "#"
+  with_items: "{{csv_input.list}}"
+  #register: cmd_output
+#- debug: 
+#    var: cmd_output

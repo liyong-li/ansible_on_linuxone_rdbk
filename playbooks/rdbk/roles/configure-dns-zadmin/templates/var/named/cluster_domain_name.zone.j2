@@ -1,0 +1,30 @@
+{% set bootstrap = cluster_nodes.bootstrap %}
+{% set masters = cluster_nodes.masters %}
+{% set workers = cluster_nodes.workers %}
+$TTL 900
+
+@                     IN SOA {{dns_hostname}}.{{ cluster_domain_name }}. hostmaster.{{ cluster_domain_name }}. (
+                        2019062002 1D 1H 1W 3H
+                      )
+                      IN NS {{dns_hostname}}.{{ cluster_domain_name }}.
+
+{{dns_hostname}}      IN A {{ dns_nameserver }}
+bastion               IN A {{  bastion_public_ip_address}}
+api                   IN A {{ haproxy_server }}
+api-int               IN A {{ haproxy_server }}
+apps                  IN A {{ haproxy_server }}
+*.apps                IN A {{ haproxy_server }}
+{% for item in bootstrap %}
+{{ item.hostname }}           IN A {{ item.ip }}
+{% endfor %}
+
+{% for item in masters %}
+{{ item.hostname }}              IN A {{ item.ip }}
+{% endfor %}
+
+{% if workers is defined %}
+{% for item in workers %}
+{{ item.hostname }}              IN A {{ item.ip }}
+{% endfor %}
+{% endif %}
+

@@ -1,0 +1,18 @@
+---
+- hosts:
+    - localhost
+  gather_facts: no
+  tasks: 
+    - name: Add a host alias 
+      add_host:
+        hostname: 'bastion_tmp'
+        groups: bastion
+        ansible_ssh_host: '{{ bastion_private_ip_address }}'
+- name: ocp mpath-controller
+  hosts: bastion_tmp 
+  #become: yes
+  #become_user: root
+  roles:
+  - ocp-day2-mpath-controller
+
+#ssh core@ocpm1 sudo multipath -ll

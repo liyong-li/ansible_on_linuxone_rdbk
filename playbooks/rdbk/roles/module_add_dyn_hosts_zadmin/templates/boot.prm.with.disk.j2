@@ -1,0 +1,16 @@
+ro ramdisk_size=40000                        
+ip={{item.ip}}::{{item.gw}}:{{item.netmask}}:{{item.hostname}}:enc1000:none
+rd.znet=qeth,0.0.1000,0.0.1001,0.0.1002,layer2=1,portno=0               
+inst.repo={{linux_inst_repo}}                
+inst.text noshell inst.cmdline 
+inst.ks={{linux_ks_path}}/{{item.part_name}}.ks inst.sshd 
+{% set sg_obj = result.storage_group %}
+{% set vols_obj = sg_obj['storage-volumes'] %}
+{% set fcpdev = [] %}
+{% for vols_item in vols_obj %}
+{% if vols_item.usage == 'boot' %}
+{% set paths_obj = vols_item.paths %}
+rd.zfcp=0.0.{{paths_obj[0]['device-number']}},0x{{ paths_obj[0]['target-world-wide-port-name']}},0x{{ paths_obj[0]['logical-unit-number']}}
+{% endif %}
+{% endfor %}
+

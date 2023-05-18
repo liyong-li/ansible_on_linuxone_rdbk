@@ -1,0 +1,24 @@
+---
+#- name: Setup and initialize variables
+#  set_fact:
+#    vols_list: "{{ [] }}"
+
+
+  - name: generate pxelinux0 entry (bootstrap)
+    vars:
+      coreos_role: bootstrap
+    include_tasks: generate_pxelinux0.yml
+    with_items: "{{ cluster_nodes.bootstrap }}"
+
+  - name: generate pxelinux0 entry (masters)
+    vars:
+      coreos_role: masters
+    include_tasks: generate_pxelinux0.yml
+    with_items: "{{ cluster_nodes.masters }}"
+
+  - name: generate pxelinux0 entry (workers)
+    vars:
+      coreos_role: workers 
+    include_tasks: generate_pxelinux0.yml
+    with_items: "{{ cluster_nodes.workers }}"
+    when: cluster_nodes.workers is defined

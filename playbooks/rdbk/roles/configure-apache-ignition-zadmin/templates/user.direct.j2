@@ -1,0 +1,27 @@
+{% set first = item.zfcp_disk[0] %}      
+{% set tmpwwpn = first.split(",")[1] %}  
+{% set wwpn = tmpwwpn.split("x")[1] %}     
+{% set tmplunid = first.split(",")[2] %}  
+{% set lunid = tmplunid.split("x")[1] %}   
+USER {{ item.zvm_uname }} LBYONLY 24G 64G G                             
+   INCLUDE INSTALL                                             
+   COMMAND TERM MORE 0 0 
+   COMMAND TERM HOLD OFF                          
+   CPU 00 BASE                                                 
+   CPU 01                                                      
+   CPU 02                                                      
+   CPU 03                                                                                                           
+   IPL CMS PARM AUTOCR                                     
+   LOADDEV PORTname {{ wwpn }}                           
+   LOADDEV LUN {{ lunid }}                                
+   LOGONBY MAINT IBMVM1                                        
+   MACHINE ESA 64   
+   NICDEF 1000 TYPE QDIO DEVICES 3 LAN SYSTEM VSW1
+{% set obj = item.zfcp_disk %}
+{% for volume in obj %}
+{% set tmpstr = volume.split(",")[0] %}
+{% set tmpstr2 = tmpstr.split("=")[1] %}
+{% set tmpstr3 = tmpstr2.split(".")[2] %}
+   DEDICATE {{ tmpstr3 }} {{ tmpstr3 }}
+{% endfor %}                                                                                                            
+   

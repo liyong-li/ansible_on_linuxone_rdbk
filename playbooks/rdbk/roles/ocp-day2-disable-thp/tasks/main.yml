@@ -1,0 +1,18 @@
+---
+# tasks file for ocp-day2-disable-thp
+
+- name: create openshift workdir
+  file:
+    path: "{{ workdir }}/thp"
+    state: "directory"
+
+- name: create yaml files
+  template:
+    dest: "{{ workdir }}/thp/{{ item }}"
+    src: "{{ item }}.j2"
+  with_items:
+  - thp-s390-tuned.yaml
+
+- name: Apply disable-thp
+  shell: "/usr/local/bin/oc apply -f {{ workdir }}/thp/thp-s390-tuned.yaml"    
+
